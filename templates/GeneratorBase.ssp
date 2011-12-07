@@ -1,0 +1,7 @@
+<%@ val target:String %>
+<% escapeMarkup = false %>
+package siq
+
+trait ${target}GeneratorBase extends ModuleBase{
+  
+}

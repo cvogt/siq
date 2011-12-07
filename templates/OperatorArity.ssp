@@ -1,0 +1,16 @@
+package scala.virtualization.lms
+package epfl
+package siq
+import common._
+import internal._
+<%
+  val max_operator_arity = 10
+  def p( max : Int, template: String ) = Range( 1, max+1 ).map( i=>template.format(i) ).mkString(",")
+  def p2( max : Int, template: String ) = Range( 1, max+1 ).map( i=>template.format(i,i) ).mkString(", ")
+%>
+
+trait OperatorArity extends BaseExp{
+#for (i <- 1 to max_operator_arity)
+  abstract class Operator${i}[${p(i,"T%s")},R]( ${p2(i,"val x%s: Exp[T%s]")} ) extends Def[R]
+#end
+}

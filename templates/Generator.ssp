@@ -1,0 +1,25 @@
+<%@ val modules:List[siq.Module] %>
+<%@ val target:String %>
+package siq
+
+trait I${target}Generator extends InterfaceBase with SchemataBase{
+  def gen${target}( r: Rep[_] ):String
+  def print${target}( r: Rep[_] )= println(gen${target}(r))
+}
+trait ${target}Generator extends I${target}Generator with ${target}GeneratorModules with SchemataBaseExp{
+  addTransformationMappings( "Test", args => args.node match{
+    //case c:   =>
+    case _ => no_mapping()
+  })
+  addDefStringMappings( "${target}", args => args.node match{
+    //case c:   =>
+    case _ => no_mapping()
+  })
+  def gen${target}( r:Exp[_] ) = render( "${target}", r, args => args.const match{
+    //case _:Int     => "" + args.const.toString + ""
+    //case _:Char    => "" + args.const.toString + ""
+    //case _:String  => "\"" + args.const.toString + "\""
+    //case _:Boolean => "" + args.const.toString + ""
+    case _ => throw new Exception("unexpected: "+args.const.toString)
+  })
+}

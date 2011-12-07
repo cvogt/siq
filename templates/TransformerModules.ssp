@@ -1,0 +1,9 @@
+<%@ val modules:List[siq.Module]  %>
+<%@ val phase:String %>
+<% escapeMarkup = false %>
+package siq
+
+trait Transformer${phase}Modules extends ModuleBase
+#for(module <- modules)
+    with Transformer${phase}${module.name}
+#end

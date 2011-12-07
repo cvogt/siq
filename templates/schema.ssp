@@ -1,0 +1,174 @@
+<%@ val schema:Map[String,siq.Meta]  %>
+package siq
+trait ISchema extends IComprehensions{
+  abstract class Tables{
+#for ((table,meta) <- schema)
+    def ${table} : Rep[Iterable[${table.capitalize}]]
+#end
+  }
+  val tables : Tables
+
+#for ((table,meta) <- schema)
+  class ${table.capitalize}(
+#for ((name_type,i) <- meta.fields.toList.zipWithIndex)
+    ${if(i>0) "," else ""}val ${name_type._1} : ${name_type._2}
+#end
+  ) extends Tuple${meta.fields.size}( ${meta.fields.keys.mkString(", ")} ){
+    override def toString = "${table.capitalize}"+super.toString
+  }
+
+#end
+// --
+#for ((table,meta) <- schema)
+  class ${table.capitalize}Schema(
+#for ((name_type,i) <- meta.fields.toList.zipWithIndex)
+    ${if(i>0) "," else ""}val ${name_type._1} : Rep[${name_type._2}]
+#end
+  ) extends Tuple${meta.fields.size}( ${meta.fields.keys.mkString(", ")} ) with SchemaBase{
+    override def toString = "${table.capitalize}Schema"+super.toString
+  }
+
+#end
+// --
+#for ((table,meta) <- schema)
+  class ${table.capitalize}Grouped(
+#for ((name_type,i) <- meta.fields.toList.zipWithIndex)
+    ${if(i>0) "," else ""}val ${name_type._1} : Iterable[${name_type._2}]
+#end
+  ) extends Tuple${meta.fields.size}( ${meta.fields.keys.mkString(", ")} ) with SchemaBase{
+    override def toString = "${table.capitalize}Grouped"+super.toString
+  }
+
+#end
+// --
+#for ((table,meta) <- schema)
+  class ${table.capitalize}SchemaGrouped(
+#for ((name_type,i) <- meta.fields.toList.zipWithIndex)
+    ${if(i>0) "," else ""}val ${name_type._1} : Rep[Iterable[${name_type._2}]]
+#end
+  ) extends Tuple${meta.fields.size}( ${meta.fields.keys.mkString(", ")} ) with SchemaBase{
+    override def toString = "${table.capitalize}SchemaGrouped"+super.toString
+  }
+
+#end
+
+#for ((table,meta) <- schema)
+  implicit def rep2${table}( r:Rep[${table.capitalize}] ) : ${table.capitalize}Schema
+  implicit def rep2${table}grouped( r:Rep[${table.capitalize}Grouped] ) : ${table.capitalize}SchemaGrouped
+  trait I${table.capitalize}Groupable{
+    def groupBy( f:${table.capitalize}Schema => Rep[_] ) : Rep[Iterable[${table.capitalize}Grouped]]
+  }
+  implicit def rep2${table}groupable( r: Rep[Iterable[${table.capitalize}]] ) : I${table.capitalize}Groupable
+#end
+
+#for ((table_meta,table_index) <- schema.toList.zipWithIndex)
+<%
+val (table,meta) = table_meta
+%>
+  def zip( r:Rep[${table.capitalize}Grouped] )(implicit o0: Overloaded0, o1: Overloaded${table_index} ) : Rep[Iterable[${table.capitalize}]]
+#end
+}
+
+trait Schema extends ISchema with Comprehensions{
+
+#for ((table_meta,table_index) <- schema.toList.zipWithIndex)
+<%
+val (table,meta) = table_meta
+%>
+  case class Zip${table.capitalize}( target:Rep[${table.capitalize}Grouped] ) extends Generator[${table.capitalize}](
+    toAtom( new LiftedSchema[${table.capitalize}Schema,${table.capitalize}](
+      new ${table.capitalize}Schema(
+#for ((name_type,i) <- meta.fields.toList.zipWithIndex)
+        ${if(i>0) "," else ""}toAtom(Zipped(target._${i+1}))
+#end
+    )))
+  ) with Zip
+  def zip( r:Rep[${table.capitalize}Grouped] )(implicit o0: Overloaded0, o1: Overloaded${table_index} )  = Zip${table.capitalize}(r)
+#end
+
+#for ((table,meta) <- schema)
+  implicit def rep2${table}groupable( r: Rep[Iterable[${table.capitalize}]] ) = ${table.capitalize}Groupable(rep2generator(r))
+
+  case class ${table.capitalize}Groupable( g:Generator[${table.capitalize}] ) extends I${table.capitalize}Groupable{
+    def groupBy( f:${table.capitalize}Schema => Rep[_] ) : Rep[Iterable[${table.capitalize}Grouped]] = {
+        val cols = rep2tuple${meta.fields.size}(g.element_references)
+        val groups = Tuple${meta.fields.size}(
+#for ((name_type,i) <- meta.fields.toList.zipWithIndex)
+          ${if(i>0) "," else ""}toAtom(Grouped(cols._${i+1}))
+#end
+        )
+        new Comprehension[ ${table.capitalize}Grouped ](
+          List[Rep[Iterable[_]]](toAtom(g))
+          , replace_with_references(groups, g)
+          , groupBy = Some(f( new ${table.capitalize}Schema(${1.to(meta.fields.size).map("cols._"+_).mkString(",")}) ))
+        )
+    }
+  }
+#end
+
+#for ((table,meta) <- schema)
+  implicit def rep2${table}( r:Rep[${table.capitalize}] ) = {
+    val t = rep2tuple${meta.fields.size}(r);
+    new ${table.capitalize}Schema(${1 to meta.fields.size map ("t._"+_) mkString(",")})
+  }
+  implicit def rep2${table}grouped( r:Rep[${table.capitalize}Grouped] ) = {
+    val t = rep2tuple${meta.fields.size}(r);
+    new ${table.capitalize}SchemaGrouped(${1 to meta.fields.size map ("t._"+_) mkString(",")})
+  }
+#end
+
+  def createModelInstance( m:Manifest[_], values:scala.collection.mutable.Stack[Any] ) : AnyRef = {
+    def getn( n:Int, values:scala.collection.mutable.Stack[Any] ) = {
+      Range(0,n).map( _ => values.pop )
+    }
+    m.erasure.toString.dropWhile( c => c != '$' ).drop(1) match{
+#for ((table,meta) <- schema)
+      case "${table.capitalize}" => {
+        val v = getn(${meta.fields.size},values);
+        new ${table.capitalize}(
+#for ((name_type,i) <- meta.fields.toList.zipWithIndex)
+          ${if(i>0) "," else ""}v(${i}).toString${if(name_type._2 == "Int") ".toDouble.toInt" else ""}
+#end
+        )
+      }
+      case "${table.capitalize}Grouped" => {
+        val v = getn(${meta.fields.size},values);
+        new ${table.capitalize}Grouped(
+#for ((name_type,i) <- meta.fields.toList.zipWithIndex)
+          ${if(i>0) "," else ""}v(${i}).asInstanceOf[List[_]].map(x => x.toString${if(name_type._2 == "Int") ".toDouble.toInt" else ""}).asInstanceOf[List[${name_type._2}]]
+#end
+        )
+      }
+#end
+    }
+  }
+
+  val tables = new Tables{
+    var alias_counter = 0
+#for ((table,meta) <- schema)
+    def ${table} = {
+      val schema_ = new ${table.capitalize}Schema(
+#for ((name_type,i) <- meta.fields.toList.zipWithIndex)
+        ${if(i>0) "," else ""}toAtom(Column[${name_type._2}]( "${name_type._1}", "${name_type._2}" ))
+#end
+      )
+      new Table[${table.capitalize}](
+        "${meta.table}",
+        toAtom( new LiftedSchema[${table.capitalize}Schema,${table.capitalize}](schema_) )
+      ){
+        val schema = schema_
+        val columns = Array[Column[_]](
+#for ((name_type,i) <- meta.fields.toList.zipWithIndex)
+          ${if(i>0) "," else ""}rep2def(schema.${name_type._1}).asInstanceOf[Column[_]]
+#end
+        )
+        val keys = Array[Column[_]](
+#for ((name,i) <- meta.keys.toList.zipWithIndex)
+          ${if(i>0) "," else ""}rep2def(schema.${name}).asInstanceOf[Column[_]]
+#end
+        )
+      }
+    }
+#end
+  }
+}

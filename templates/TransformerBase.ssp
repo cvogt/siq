@@ -1,0 +1,8 @@
+<%@ val phase:String %>
+<% escapeMarkup = false %>
+package siq
+
+trait Transformer${phase}Base extends ModuleBase{
+  
+}
+

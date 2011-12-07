@@ -1,0 +1,13 @@
+<%@ val modules:List[siq.Module]  %>
+<% escapeMarkup = false %>
+package siq
+
+trait IGeneratedModules extends IModuleBase
+#for(module <- modules)
+    with I${module.name}Ops
+#end
+
+trait GeneratedModules extends ModuleBase
+#for(module <- modules)
+    with ${module.name}Ops
+#end

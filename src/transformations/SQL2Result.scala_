@@ -1,0 +1,50 @@
+package scala.virtualization.lms
+package epfl
+package siq
+package engines
+/*
+trait IJdbc2 extends generators.ISqlGenerator with IResults
+{
+  def query[R <: Product]( r:Query[R] )(implicit manifest: scala.reflect.Manifest[R]) : List[Result[R]]
+}
+trait Jdbc2 extends IJdbc2 with generators.SqlGenerator with Results{
+  // Import JDBC package from standard Java SDK
+  import java.sql.{Connection, DriverManager, ResultSet}
+  // Load the driver
+  Class.forName("com.mysql.jdbc.Driver").newInstance
+  def getValue( rs:ResultSet, index: Int, column_type : String ) =
+    column_type match {
+      case "java.lang.String" => rs getString index
+      case "Int" => rs getInt index
+      case _ => throw new Exception("unexpected column type: "+column_type)
+    }
+
+  def query[R <: Product]( r:Query[R] )(implicit manifest: scala.reflect.Manifest[R]) = {
+    val sql = genSql( toAtom(r) )
+    val connection = DriverManager getConnection "jdbc:mysql://localhost:3306/siq?user=root&amp;password=&amp;characterEncoding=UTF8"
+    var results = List[Result[R]]()
+    try{
+      // Create statement for readonly
+      val statement = connection createStatement (ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY)
+      val rs = statement executeQuery sql
+
+      // Looping resultset
+      while (rs next) {
+        var result = List[Any]()
+        if( manifest.typeArguments.length > 0 ){
+          try{
+            for( i<-Range(1,99) ){
+              result = result :+ getValue(rs, i, manifest.typeArguments(i-1).typeArguments(0).toString)
+            }
+          } catch{ case _ => () }
+        } else {
+          result = result :+ getValue(rs, 1, manifest.toString )
+        }
+        results = results :+ new Result[R](result)
+      }
+      statement close
+    } finally { connection close }
+    results
+  }
+}
+*/

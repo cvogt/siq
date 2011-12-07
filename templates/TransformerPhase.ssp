@@ -1,0 +1,16 @@
+<%@ val module:siq.Module  %>
+<%@ val phase:String %>
+<%@ val last_phase:String %>
+<% escapeMarkup = false %>
+<% val indent = module.operators.map( o => o.nodeClass.size ).max %>
+package siq
+
+trait ${"Transformer"+phase+module.name} extends Transformer${phase}Base with ${if (phase == last_phase) module.name+"Ops" else phase+"Transformer"+module.name}
+{
+  addTransformations( args => args.node match{
+#for(o <- module.operators)
+    //case ${o.nodeClass}(x,y)${Range(o.nodeClass.size,indent).map(_=>" ").mkString("")} => 
+#end
+    case _ => no_mapping()
+  })
+}

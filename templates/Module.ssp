@@ -1,0 +1,33 @@
+<%@ val module:siq.Module  %>
+<%@ val module_num : Int %>
+<% escapeMarkup = false %>
+<% val indent = module.operators.map( o => o.nodeClass.size ).max %>
+package siq
+
+trait I${module.name}Ops extends IModuleBase{
+#for((o,i) <- module.operators.zipWithIndex)
+<% val overloaded = module.operators.filter( op => op.operator == o.operator ).size > 1 %>
+  def infix_${o.operator}( x: Rep[${o.lhs}], y: Rep[${o.rhs}] )(implicit module_num: Overloaded${module_num}${if (overloaded) ", overload: Overloaded"+(i+1) else ""}): Rep[${o.return_}]
+#end
+}
+trait ${module.name}Ops extends ModuleBase with I${module.name}Ops{
+
+#for(o <- module.operators)
+  case class ${o.nodeClass}${Range(o.nodeClass.size,indent).map(_=>" ").mkString("")}( x: Exp[${o.lhs}], y: Exp[${o.rhs}] ) extends Node[${o.return_}]( "${o.operator}" )
+#end
+
+#for((o,i) <- module.operators.zipWithIndex)
+<% val overloaded = module.operators.filter( op => op.operator == o.operator ).size > 1 %>
+  def infix_${o.operator}( x: Exp[${o.lhs}], y: Exp[${o.rhs}] )(implicit module_num: Overloaded${module_num}${if (overloaded) ", overload: Overloaded"+(i+1) else ""}) = ( ${o.nodeClass}${Range(o.nodeClass.size,indent).map(_=>" ").mkString("")}(x,y) ) // apply transform() here
+#end
+
+  def ${module.name}IdentityMapper(args: TransformationArgs) = args.node match{
+#for(o <- module.operators)
+<%
+// this cannot be shortened to operator call as this would create infinite recursion
+%>    case ${o.nodeClass}${Range(o.nodeClass.size,indent).map(_=>" ").mkString("")}( x, y ) => ${o.nodeClass}${Range(o.nodeClass.size,indent).map(_=>" ").mkString("")}( args.mapper(x), args.mapper(y) )
+#end
+    case _ => throw new NoMappingException()
+  }
+  addIdentityMappings( ${module.name}IdentityMapper _ )
+}

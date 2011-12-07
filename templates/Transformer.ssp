@@ -1,0 +1,6 @@
+<%@ val module:siq.Module  %>
+<%@ val last_phase:String %>
+<% escapeMarkup = false %>
+package siq
+
+trait ${"Transformer"+module.name} extends ${"Transformer"+last_phase+module.name}

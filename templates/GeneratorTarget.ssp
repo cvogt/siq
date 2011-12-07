@@ -1,0 +1,16 @@
+<%@ val module:siq.Module  %>
+<%@ val target:String %>
+<% escapeMarkup = false %>
+<% val indent = module.operators.map( o => o.nodeClass.size ).max %>
+package siq
+
+trait ${target}Generator${module.name} extends ${target}GeneratorBase with transformers.Transformer${module.name}
+{
+  addDefStringMappings( "${target}", args => args.node match{
+    // c&p template: "" + args.mapper(n.x) + "" + args.mapper(n.y) + ""
+#for(o <- module.operators)
+    case n:${o.nodeClass}${Range(o.nodeClass.size,indent).map(_=>" ").mkString("")} => args.render_operator
+#end
+    case _ => no_mapping()
+  })
+}
